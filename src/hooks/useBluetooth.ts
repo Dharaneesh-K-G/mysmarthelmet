@@ -107,12 +107,9 @@ export const useBluetooth = (onCrashDetected: () => void) => {
 
     try {
       // Request device with Arduino BLE service
+      // Using acceptAllDevices for broader compatibility, then filter by service
       const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { services: [ARDUINO_SERVICE_UUID] },
-          { namePrefix: 'Arduino' },
-          { namePrefix: 'Crash' },
-        ],
+        acceptAllDevices: true,
         optionalServices: [ARDUINO_SERVICE_UUID],
       });
 
