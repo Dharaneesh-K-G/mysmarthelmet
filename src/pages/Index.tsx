@@ -73,30 +73,18 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-4">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-emergency flex items-center justify-center shadow-glow">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gradient">CrashGuard</h1>
-              <p className="text-xs text-muted-foreground">Emergency Alert System</p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Activity className={`h-4 w-4 ${bluetooth.isConnected ? 'text-success animate-pulse' : 'text-muted-foreground'}`} />
-              <span className="text-xs text-muted-foreground">
-                {bluetooth.isConnected ? 'Active' : 'Standby'}
-              </span>
-            </div>
-          </div>
-        </div>
+      <header className="border-b border-border pb-4 mb-6">
+        <h1 className="text-2xl font-bold">CrashGuard</h1>
+        <p className="text-sm text-muted-foreground">Emergency Alert System</p>
+        <p className="text-xs mt-1">
+          Status: {bluetooth.isConnected ? '🟢 Connected' : '⚪ Not Connected'}
+        </p>
       </header>
 
       {/* Main Content */}
-      <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="space-y-6 max-w-xl">
         {/* Crash Alert Status */}
         <CrashAlert
           crashDetected={bluetooth.crashDetected}
@@ -107,28 +95,27 @@ const Index = () => {
           onSimulateCrash={bluetooth.simulateCrash}
         />
 
-        {/* Status Cards Grid */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <BluetoothStatus
-            isConnected={bluetooth.isConnected}
-            isConnecting={bluetooth.isConnecting}
-            deviceName={bluetooth.deviceName}
-            error={bluetooth.error}
-            onConnect={bluetooth.connectToDevice}
-            onDisconnect={bluetooth.disconnect}
-          />
+        {/* Bluetooth */}
+        <BluetoothStatus
+          isConnected={bluetooth.isConnected}
+          isConnecting={bluetooth.isConnecting}
+          deviceName={bluetooth.deviceName}
+          error={bluetooth.error}
+          onConnect={bluetooth.connectToDevice}
+          onDisconnect={bluetooth.disconnect}
+        />
 
-          <LocationStatus
-            latitude={location.latitude}
-            longitude={location.longitude}
-            accuracy={location.accuracy}
-            isTracking={location.isTracking}
-            error={location.error}
-            lastUpdated={location.lastUpdated}
-            onStartTracking={location.startTracking}
-            onStopTracking={location.stopTracking}
-          />
-        </div>
+        {/* Location */}
+        <LocationStatus
+          latitude={location.latitude}
+          longitude={location.longitude}
+          accuracy={location.accuracy}
+          isTracking={location.isTracking}
+          error={location.error}
+          lastUpdated={location.lastUpdated}
+          onStartTracking={location.startTracking}
+          onStopTracking={location.stopTracking}
+        />
 
         {/* Contacts */}
         <ContactsList
@@ -140,14 +127,10 @@ const Index = () => {
         {/* Email Settings */}
         <EmailSettings />
 
-        {/* Footer Info */}
-        <div className="text-center pb-8">
-          <p className="text-xs text-muted-foreground">
-            Keep the app open and location enabled for automatic crash detection.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Arduino should use BLE service UUID: <code className="font-mono text-accent">19b10000-e8f2-537e-4f6c-d104768a1214</code>
-          </p>
+        {/* Footer */}
+        <div className="text-xs text-muted-foreground border-t pt-4">
+          <p>Keep the app open for crash detection.</p>
+          <p>Arduino UUID: 19b10000-e8f2-537e-4f6c-d104768a1214</p>
         </div>
       </main>
     </div>
