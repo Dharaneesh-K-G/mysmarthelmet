@@ -58,13 +58,9 @@ export const sendEmergencyEmail = async (
     // Send email to each contact
     const emailPromises = contacts.map(contact =>
       emailjs.send(config.serviceId, config.templateId, {
-        to_name: contact.name,
+        name: contact.name,
         to_email: contact.email,
-        location_link: locationLink,
-        latitude: latitude.toFixed(6),
-        longitude: longitude.toFixed(6),
-        timestamp: new Date().toLocaleString(),
-        message: `EMERGENCY ALERT: A crash has been detected! The victim's current location is: ${locationLink}`,
+        message: `🚨 EMERGENCY ALERT: A crash has been detected!\n\nTime: ${new Date().toLocaleString()}\n\nVictim's Location: ${locationLink}\n\nPlease respond immediately!`,
       })
     );
 

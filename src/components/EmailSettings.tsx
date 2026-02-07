@@ -106,14 +106,12 @@ export const EmailSettings = () => {
 
         <div className="bg-secondary/50 p-3 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Template variables:</strong> Use these in your EmailJS template:
+            <strong>Template variables:</strong> Your EmailJS template should use:
           </p>
           <ul className="text-xs text-muted-foreground mt-1 space-y-0.5 font-mono">
-            <li>{'{{to_name}}'} - Contact name</li>
+            <li>{'{{name}}'} - Contact name</li>
             <li>{'{{to_email}}'} - Contact email</li>
-            <li>{'{{location_link}}'} - Google Maps link</li>
-            <li>{'{{message}}'} - Emergency message</li>
-            <li>{'{{timestamp}}'} - Alert time</li>
+            <li>{'{{message}}'} - Emergency message with location</li>
           </ul>
         </div>
 
