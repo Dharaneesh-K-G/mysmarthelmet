@@ -32,7 +32,7 @@ export const useBluetooth = (onCrashDetected: () => void) => {
     onCrashDetectedRef.current = onCrashDetected;
   }, [onCrashDetected]);
 
-  const readLoop = useCallback(async (port: SerialPort) => {
+  const readLoop = useCallback(async (port: SerialPortCustom) => {
     const decoder = new TextDecoder();
     let buffer = '';
 
