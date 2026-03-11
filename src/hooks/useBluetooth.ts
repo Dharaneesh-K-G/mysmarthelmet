@@ -23,7 +23,7 @@ export const useBluetooth = (onCrashDetected: () => void) => {
     crashDetected: false,
   });
 
-  const portRef = useRef<SerialPort | null>(null);
+  const portRef = useRef<SerialPortCustom | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const onCrashDetectedRef = useRef(onCrashDetected);
   const readingRef = useRef(false);
