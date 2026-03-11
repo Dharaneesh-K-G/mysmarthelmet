@@ -1,5 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+interface SerialPortCustom {
+  readable: ReadableStream<Uint8Array> | null;
+  open(options: { baudRate: number }): Promise<void>;
+  close(): Promise<void>;
+}
+
 interface BluetoothState {
   isConnected: boolean;
   isConnecting: boolean;
