@@ -19,8 +19,8 @@ export const BluetoothStatus = ({
 }: BluetoothStatusProps) => {
   return (
     <div className="border border-border p-4 bg-card">
-      <h2 className="font-bold mb-2">Bluetooth Connection</h2>
-      <p className="text-sm mb-2">Connect to your Arduino device</p>
+      <h2 className="font-bold mb-2">Serial Connection</h2>
+      <p className="text-sm mb-2">Connect to HC-06 (pair it with your PC first via Bluetooth settings)</p>
       
       <p className="text-sm mb-2">
         Status: {isConnected ? `✅ Connected to ${deviceName}` : isConnecting ? '⏳ Connecting...' : '❌ Disconnected'}
