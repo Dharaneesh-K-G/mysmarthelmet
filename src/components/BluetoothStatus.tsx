@@ -35,7 +35,7 @@ export const BluetoothStatus = ({
         disabled={isConnecting}
         className="w-full"
       >
-        {isConnecting ? 'Connecting...' : isConnected ? 'Disconnect' : 'Connect to Arduino'}
+        {isConnecting ? 'Connecting...' : isConnected ? 'Disconnect' : 'Connect to HC-06'}
       </Button>
     </div>
   );

@@ -130,7 +130,7 @@ const Index = () => {
         {/* Footer */}
         <div className="text-xs text-muted-foreground border-t pt-4">
           <p>Keep the app open for crash detection.</p>
-          <p>Arduino UUID: 19b10000-e8f2-537e-4f6c-d104768a1214</p>
+          <p>HC-06 Baud Rate: 9600 | Arduino sends "CRASH" or "1" to trigger alert</p>
         </div>
       </main>
     </div>

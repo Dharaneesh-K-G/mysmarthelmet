@@ -8,56 +8,6 @@ interface BluetoothState {
   crashDetected: boolean;
 }
 
-// Common Arduino BLE Service UUIDs - adjust these to match your Arduino's configuration
-const ARDUINO_SERVICE_UUID = '19b10000-e8f2-537e-4f6c-d104768a1214';
-const CRASH_CHARACTERISTIC_UUID = '19b10001-e8f2-537e-4f6c-d104768a1214';
-
-interface BluetoothDeviceCustom {
-  name?: string;
-  gatt?: BluetoothRemoteGATTServerCustom;
-  addEventListener(type: string, listener: EventListener): void;
-  removeEventListener(type: string, listener: EventListener): void;
-}
-
-interface BluetoothRemoteGATTServerCustom {
-  connected: boolean;
-  connect(): Promise<BluetoothRemoteGATTServerCustom>;
-  disconnect(): void;
-  getPrimaryService(service: string): Promise<BluetoothRemoteGATTServiceCustom>;
-}
-
-interface BluetoothRemoteGATTServiceCustom {
-  getCharacteristic(characteristic: string): Promise<BluetoothRemoteGATTCharacteristicCustom>;
-}
-
-interface BluetoothRemoteGATTCharacteristicCustom {
-  value?: DataView;
-  startNotifications(): Promise<BluetoothRemoteGATTCharacteristicCustom>;
-  stopNotifications(): Promise<BluetoothRemoteGATTCharacteristicCustom>;
-  addEventListener(type: string, listener: EventListener): void;
-  removeEventListener(type: string, listener: EventListener): void;
-}
-
-interface RequestDeviceOptions {
-  filters?: Array<{
-    services?: string[];
-    namePrefix?: string;
-    name?: string;
-  }>;
-  optionalServices?: string[];
-  acceptAllDevices?: boolean;
-}
-
-interface NavigatorBluetooth {
-  requestDevice(options: RequestDeviceOptions): Promise<BluetoothDeviceCustom>;
-}
-
-declare global {
-  interface Navigator {
-    bluetooth?: NavigatorBluetooth;
-  }
-}
-
 export const useBluetooth = (onCrashDetected: () => void) => {
   const [state, setState] = useState<BluetoothState>({
     isConnected: false,
@@ -67,38 +17,64 @@ export const useBluetooth = (onCrashDetected: () => void) => {
     crashDetected: false,
   });
 
-  const deviceRef = useRef<BluetoothDeviceCustom | null>(null);
-  const characteristicRef = useRef<BluetoothRemoteGATTCharacteristicCustom | null>(null);
+  const portRef = useRef<SerialPort | null>(null);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const onCrashDetectedRef = useRef(onCrashDetected);
+  const readingRef = useRef(false);
 
   useEffect(() => {
     onCrashDetectedRef.current = onCrashDetected;
   }, [onCrashDetected]);
 
-  const handleCrashNotification = useCallback((event: Event) => {
-    const target = event.target as unknown as BluetoothRemoteGATTCharacteristicCustom;
-    const value = target.value;
-    
-    if (value) {
-      const crashSignal = value.getUint8(0);
-      // Assuming 1 = crash detected, 0 = no crash
-      if (crashSignal === 1) {
-        setState(prev => ({ ...prev, crashDetected: true }));
-        onCrashDetectedRef.current();
-        
-        // Reset crash state after 5 seconds
-        setTimeout(() => {
-          setState(prev => ({ ...prev, crashDetected: false }));
-        }, 5000);
+  const readLoop = useCallback(async (port: SerialPort) => {
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (port.readable && readingRef.current) {
+      const reader = port.readable.getReader();
+      readerRef.current = reader;
+
+      try {
+        while (readingRef.current) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete lines (Arduino sends data ending with \n)
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            console.log('HC-06 received:', trimmed);
+
+            // Check for crash signal - Arduino sends "CRASH" or "1"
+            if (trimmed === 'CRASH' || trimmed === '1') {
+              setState(prev => ({ ...prev, crashDetected: true }));
+              onCrashDetectedRef.current();
+
+              setTimeout(() => {
+                setState(prev => ({ ...prev, crashDetected: false }));
+              }, 5000);
+            }
+          }
+        }
+      } catch (error) {
+        if (readingRef.current) {
+          console.error('Read error:', error);
+        }
+      } finally {
+        reader.releaseLock();
       }
     }
   }, []);
 
   const connectToDevice = useCallback(async () => {
-    if (!navigator.bluetooth) {
+    if (!('serial' in navigator)) {
       setState(prev => ({
         ...prev,
-        error: 'Web Bluetooth is not supported in this browser. Please use Chrome or Edge.',
+        error: 'Web Serial API not supported. Use Chrome or Edge. Make sure HC-06 is paired with your computer first.',
       }));
       return;
     }
@@ -106,50 +82,25 @@ export const useBluetooth = (onCrashDetected: () => void) => {
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
-      // Request device with Arduino BLE service
-      // Using acceptAllDevices for broader compatibility, then filter by service
-      const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [ARDUINO_SERVICE_UUID],
-      });
+      // Request a serial port - user picks the HC-06 from the list
+      const port = await (navigator as any).serial.requestPort();
+      portRef.current = port;
 
-      deviceRef.current = device;
+      // HC-06 default baud rate is 9600
+      await port.open({ baudRate: 9600 });
 
-      // Handle disconnection
-      device.addEventListener('gattserverdisconnected', () => {
-        setState(prev => ({
-          ...prev,
-          isConnected: false,
-          deviceName: null,
-          crashDetected: false,
-        }));
-        characteristicRef.current = null;
-      });
-
-      // Connect to GATT server
-      const server = await device.gatt?.connect();
-      if (!server) {
-        throw new Error('Failed to connect to GATT server');
-      }
-
-      // Get the crash detection service
-      const service = await server.getPrimaryService(ARDUINO_SERVICE_UUID);
-      
-      // Get the crash characteristic
-      const characteristic = await service.getCharacteristic(CRASH_CHARACTERISTIC_UUID);
-      characteristicRef.current = characteristic;
-
-      // Start notifications for crash detection
-      await characteristic.startNotifications();
-      characteristic.addEventListener('characteristicvaluechanged', handleCrashNotification);
+      readingRef.current = true;
 
       setState(prev => ({
         ...prev,
         isConnected: true,
         isConnecting: false,
-        deviceName: device.name || 'Unknown Device',
+        deviceName: 'HC-06 (Serial)',
         error: null,
       }));
+
+      // Start reading data from Arduino
+      readLoop(port);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
       setState(prev => ({
@@ -158,18 +109,27 @@ export const useBluetooth = (onCrashDetected: () => void) => {
         error: errorMessage,
       }));
     }
-  }, [handleCrashNotification]);
+  }, [readLoop]);
 
-  const disconnect = useCallback(() => {
-    if (characteristicRef.current) {
-      characteristicRef.current.removeEventListener(
-        'characteristicvaluechanged',
-        handleCrashNotification
-      );
+  const disconnect = useCallback(async () => {
+    readingRef.current = false;
+
+    if (readerRef.current) {
+      try {
+        await readerRef.current.cancel();
+      } catch (e) {
+        // ignore
+      }
+      readerRef.current = null;
     }
 
-    if (deviceRef.current?.gatt?.connected) {
-      deviceRef.current.gatt.disconnect();
+    if (portRef.current) {
+      try {
+        await portRef.current.close();
+      } catch (e) {
+        // ignore
+      }
+      portRef.current = null;
     }
 
     setState({
@@ -179,12 +139,12 @@ export const useBluetooth = (onCrashDetected: () => void) => {
       error: null,
       crashDetected: false,
     });
-  }, [handleCrashNotification]);
+  }, []);
 
   const simulateCrash = useCallback(() => {
     setState(prev => ({ ...prev, crashDetected: true }));
     onCrashDetectedRef.current();
-    
+
     setTimeout(() => {
       setState(prev => ({ ...prev, crashDetected: false }));
     }, 5000);
